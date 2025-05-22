@@ -47,7 +47,7 @@ pipeline {
     stage('Clone Helm GitOps Repo') {
       steps {
         dir("${HELM_REPO}") {
-          git url: "${GIT_REPO_URL}", credentialsId: 'github-token', branch: 'main'
+          git url: "${GIT_REPO_URL}", credentialsId: 'github-vantaicn', branch: 'main'
         }
       }
     }
@@ -68,7 +68,7 @@ pipeline {
     stage('Commit and Push') {
       steps {
         dir("${HELM_REPO}") {
-          withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+          withCredentials([usernamePassword(credentialsId: 'github-vantaicn', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
             sh """
               git config user.email "ci@example.com"
               git config user.name "jenkins"
