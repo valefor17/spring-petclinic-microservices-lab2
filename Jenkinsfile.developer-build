@@ -1,0 +1,82 @@
+pipeline {
+  agent any
+
+  parameters {
+    string(name: 'customers-service', defaultValue: '', description: 'Branch you want to deploy customers-service')
+    string(name: 'vets-service', defaultValue: '', description: 'Branch you want to deploy vets-service')
+    string(name: 'visits-service', defaultValue: '', description: 'Branch you want to deploy visits-service')
+    string(name: 'api-gateway', defaultValue: '', description: 'Branch you want to deploy api-gateway')
+    choice(name: 'developer', choices: ['thuw', 'trucs', 'quys', 'taif'], description: 'Developer name')
+  }
+
+  environment {
+    HELM_REPO = 'spring-petclinic-microservices-gitops'
+    GIT_REPO_URL = 'https://github.com/vantaicn/spring-petclinic-microservices-gitops.git'
+  }
+
+  stages {
+    stage('Get Commit Hash') {
+      steps {
+        script {
+          def getCommitId = { branch ->
+            return sh(script: "git ls-remote https://github.com/spring-petclinic/spring-petclinic-microservices.git refs/heads/${branch} | cut -f1", returnStdout: true).trim().take(7)
+          }
+
+          env.CUSTOMERS_TAG = params.CUSTOMERS_BRANCH ? getCommitId(params.CUSTOMERS_BRANCH) : 'latest'
+          env.VETS_TAG = params.VETS_BRANCH ? getCommitId(params.VETS_BRANCH) : 'latest'
+          env.VISITS_TAG = params.VISITS_BRANCH ? getCommitId(params.VISITS_BRANCH) : 'latest'
+
+          echo "CUSTOMERS_TAG: ${env.CUSTOMERS_TAG}"
+          echo "VETS_TAG: ${env.VETS_TAG}"
+          echo "VISITS_TAG: ${env.VISITS_TAG}"
+        }
+      }
+    }
+
+    stage('Clone Helm GitOps Repo') {
+      steps {
+        dir("${HELM_REPO}") {
+          git url: "${GIT_REPO_URL}", credentialsId: 'github-token', branch: 'main'
+        }
+      }
+    }
+
+    stage('Update values file') {
+      steps {
+        script {
+          def file = "${HELM_REPO}/values-${params.DEVELOPER}.yaml"
+          sh """
+            yq e '.services["spring-petclinic-customers-service"].tag = "${CUSTOMERS_TAG}"' -i ${file}
+            yq e '.services["spring-petclinic-vets-service"].tag = "${VETS_TAG}"' -i ${file}
+            yq e '.services["spring-petclinic-visits-service"].tag = "${VISITS_TAG}"' -i ${file}
+          """
+        }
+      }
+    }
+
+    stage('Commit and Push') {
+      steps {
+        dir("${HELM_REPO}") {
+          withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+            sh """
+              git config user.email "ci@example.com"
+              git config user.name "jenkins"
+              git add values-${params.DEVELOPER}.yaml
+              git commit -m "Update ${params.DEVELOPER} values - ${BUILD_NUMBER}" || echo "No changes"
+              git push https://${GIT_USER}:${GIT_PASS}@github.com/vantaicn/spring-petclinic-microservices-gitops.git HEAD:main
+            """
+          }
+        }
+      }
+    }
+
+    stage('Set Build Description') {
+      steps {
+        script {
+          currentBuild.displayName = "#${BUILD_NUMBER} - ${params.DEVELOPER}"
+          currentBuild.description = "Branch: customers=${params.CUSTOMERS_BRANCH}, vets=${params.VETS_BRANCH}, visits=${params.VISITS_BRANCH} <br><a href='http://${params.DEVELOPER}.spring-petclinic.local'>Xem hệ thống</a>"
+        }
+      }
+    }
+  }
+}
