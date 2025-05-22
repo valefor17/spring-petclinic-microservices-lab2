@@ -2,10 +2,10 @@ pipeline {
   agent any
 
   parameters {
-    string(name: 'customers-service', defaultValue: '', description: 'Branch you want to deploy customers-service')
-    string(name: 'vets-service', defaultValue: '', description: 'Branch you want to deploy vets-service')
-    string(name: 'visits-service', defaultValue: '', description: 'Branch you want to deploy visits-service')
-    string(name: 'api-gateway', defaultValue: '', description: 'Branch you want to deploy api-gateway')
+    string(name: 'customers-service', defaultValue: 'main', description: 'Branch you want to deploy customers-service')
+    string(name: 'vets-service', defaultValue: 'main', description: 'Branch you want to deploy vets-service')
+    string(name: 'visits-service', defaultValue: 'main', description: 'Branch you want to deploy visits-service')
+    string(name: 'api-gateway', defaultValue: 'main', description: 'Branch you want to deploy api-gateway')
     choice(name: 'developer', choices: ['thuw', 'trucs', 'quys', 'taif'], description: 'Developer name')
   }
 
@@ -19,7 +19,6 @@ pipeline {
     stage('Get Commit Hashes') {
       steps {
         script {
-          // Danh sách các service và map chứa tag
           services = [
             'customers-service': 'spring-petclinic-customers-service',
             'vets-service': 'spring-petclinic-vets-service',
@@ -28,14 +27,16 @@ pipeline {
           ]
           tagMap = [:]
 
-          def getCommitId = { branch ->
+          def getTagForBranch = { branch ->
+            if (!branch || branch == 'main') {
+              return 'latest'
+            }
             return sh(script: "git ls-remote ${SOURCE_REPO} refs/heads/${branch} | cut -f1", returnStdout: true).trim().take(7)
           }
 
-          // Duyệt từng service để lấy commit id tương ứng
           services.each { paramName, helmServiceName ->
             def branch = params[paramName]
-            def tag = branch ? getCommitId(branch) : 'latest'
+            def tag = getTagForBranch(branch)
             tagMap[helmServiceName] = tag
             echo "${helmServiceName} -> ${tag}"
           }
