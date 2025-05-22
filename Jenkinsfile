@@ -3,22 +3,22 @@ pipeline {
 
   environment {
     DOCKER_HUB_USER = 'vantaicn'
-    IMAGE_TAG = ''
     HELM_REPO_DIR = 'spring-petclinic-microservices-gitops'
     TARGET_SERVICES = ''
   }
 
   stages {
+    def IMAGE_TAG = ''
 
     stage('Prepare') {
       steps {
         script {
           if (env.TAG_NAME) {
-            env.IMAGE_TAG = env.TAG_NAME
+            IMAGE_TAG = env.TAG_NAME
           } else if (env.GIT_COMMIT) {
-            env.IMAGE_TAG = env.GIT_COMMIT.take(7)
+            IMAGE_TAG = env.GIT_COMMIT.take(7)
           }
-          echo "Image tag sẽ dùng: ${env.IMAGE_TAG}"
+          echo "Image tag sẽ dùng: ${IMAGE_TAG}"
         }
       }
     }
