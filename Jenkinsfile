@@ -26,35 +26,21 @@ pipeline {
     stage('Detect Changed Service') {
       steps {
         script {
-          def allServices = [
-            'spring-petclinic-admin-server',
-            'spring-petclinic-customers-service',
-            'spring-petclinic-vets-service',
-            'spring-petclinic-visits-service',
-            'spring-petclinic-config-server',
-            'spring-petclinic-discovery-server',
-            'spring-petclinic-api-gateway'
-          ]
+          def changedFiles = sh(script: "git diff --name-only HEAD~1", returnStdout: true).trim()
+          def matchedService = ''
 
-          if (env.TAG_NAME) {
-            echo "Tag được phát hiện (${env.TAG_NAME}) → build toàn bộ services."
-            env.TARGET_SERVICES = allServices.join(',')
-          } else {
-            def changedFiles = sh(script: "git diff --name-only HEAD~1", returnStdout: true).trim()
-            def services = [] as Set
-            changedFiles.split('\n').each { file ->
-              if (file.contains("spring-petclinic-") && file.contains("-service/")) {
-                services << file.split('/')[0]
-              }
+          changedFiles.split('\n').each { file ->
+            if (file.contains("spring-petclinic-") && file.contains("-service/")) {
+              matchedService = file.split('/')[0]
             }
-
-            if (services.isEmpty()) {
-              error("Không phát hiện service nào bị thay đổi.")
-            }
-
-            env.TARGET_SERVICES = services.join(',')
-            echo "Changed services: ${env.TARGET_SERVICES}"
           }
+
+          if (!matchedService) {
+            error("Không phát hiện service nào bị thay đổi.")
+          }
+
+          env.TARGET_SERVICE = matchedService
+          echo "Changed services: ${env.TARGET_SERVICE}"
         }
       }
     }
