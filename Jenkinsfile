@@ -73,7 +73,7 @@ pipeline {
 
     stage('Push Docker Images') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-vantaicn', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           script {
             sh 'echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin'
             env.TARGET_SERVICES.split(',').each { svc ->
@@ -96,7 +96,7 @@ pipeline {
       }
       steps {
         dir("${HELM_REPO_DIR}") {
-          git url: 'https://github.com/vantaicn/spring-petclinic-microservices-gitops.git', credentialsId: 'github-token', branch: 'main'
+          git url: 'https://github.com/vantaicn/spring-petclinic-microservices-gitops.git', credentialsId: 'github-vantaicn', branch: 'main'
         }
       }
     }
@@ -130,7 +130,7 @@ pipeline {
       }
       steps {
         dir("${HELM_REPO_DIR}") {
-          withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+          withCredentials([usernamePassword(credentialsId: 'github-vantaicn', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
             sh """
               git config user.email "ci@example.com"
               git config user.name "jenkins"

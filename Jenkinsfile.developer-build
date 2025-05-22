@@ -89,7 +89,7 @@ pipeline {
           }.join(', ')
 
           currentBuild.displayName = "#${BUILD_NUMBER} - ${params.developer}"
-          currentBuild.description = "${desc} <br><a href='http://${params.developer}.spring-petclinic.local'>Xem hệ thống</a>"
+          currentBuild.description = "${desc} <br><a href='http://${params.developer}.spring-petclinic'>Xem hệ thống</a>"
         }
       }
     }
