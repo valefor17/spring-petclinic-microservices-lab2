@@ -41,20 +41,19 @@ pipeline {
             env.TARGET_SERVICES = allServices.join(',')
           } else {
             def changedFiles = sh(script: "git diff --name-only HEAD~1", returnStdout: true).trim()
-            def matchedService = ''
-
-          changedFiles.split('\n').each { file ->
-            if (file.contains("spring-petclinic-") && file.contains("-service/")) {
-              matchedService = file.split('/')[0]
+            def services = [] as Set
+            changedFiles.split('\n').each { file ->
+              if (file.contains("spring-petclinic-") && file.contains("-service/")) {
+                services << file.split('/')[0]
+              }
             }
-          }
 
-            // if (services.isEmpty()) {
-            //   error("Không phát hiện service nào bị thay đổi.")
-            // }
+            if (services.isEmpty()) {
+              error("Không phát hiện service nào bị thay đổi.")
+            }
 
-            // env.TARGET_SERVICES = services.join(',')
-            // echo "Changed services: ${env.TARGET_SERVICES}"
+            env.TARGET_SERVICES = services.join(',')
+            echo "Changed services: ${env.TARGET_SERVICES}"
           }
         }
       }
