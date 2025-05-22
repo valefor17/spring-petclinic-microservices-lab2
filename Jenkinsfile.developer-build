@@ -12,23 +12,33 @@ pipeline {
   environment {
     HELM_REPO = 'spring-petclinic-microservices-gitops'
     GIT_REPO_URL = 'https://github.com/vantaicn/spring-petclinic-microservices-gitops.git'
+    SOURCE_REPO = 'https://github.com/spring-petclinic/spring-petclinic-microservices.git'
   }
 
   stages {
-    stage('Get Commit Hash') {
+    stage('Get Commit Hashes') {
       steps {
         script {
+          // Danh sách các service và map chứa tag
+          services = [
+            'customers-service': 'spring-petclinic-customers-service',
+            'vets-service': 'spring-petclinic-vets-service',
+            'visits-service': 'spring-petclinic-visits-service',
+            'api-gateway': 'spring-petclinic-api-gateway'
+          ]
+          tagMap = [:]
+
           def getCommitId = { branch ->
-            return sh(script: "git ls-remote https://github.com/spring-petclinic/spring-petclinic-microservices.git refs/heads/${branch} | cut -f1", returnStdout: true).trim().take(7)
+            return sh(script: "git ls-remote ${SOURCE_REPO} refs/heads/${branch} | cut -f1", returnStdout: true).trim().take(7)
           }
 
-          env.CUSTOMERS_TAG = params.CUSTOMERS_BRANCH ? getCommitId(params.CUSTOMERS_BRANCH) : 'latest'
-          env.VETS_TAG = params.VETS_BRANCH ? getCommitId(params.VETS_BRANCH) : 'latest'
-          env.VISITS_TAG = params.VISITS_BRANCH ? getCommitId(params.VISITS_BRANCH) : 'latest'
-
-          echo "CUSTOMERS_TAG: ${env.CUSTOMERS_TAG}"
-          echo "VETS_TAG: ${env.VETS_TAG}"
-          echo "VISITS_TAG: ${env.VISITS_TAG}"
+          // Duyệt từng service để lấy commit id tương ứng
+          services.each { paramName, helmServiceName ->
+            def branch = params[paramName]
+            def tag = branch ? getCommitId(branch) : 'latest'
+            tagMap[helmServiceName] = tag
+            echo "${helmServiceName} -> ${tag}"
+          }
         }
       }
     }
@@ -41,15 +51,15 @@ pipeline {
       }
     }
 
-    stage('Update values file') {
+    stage('Update Helm values') {
       steps {
         script {
-          def file = "${HELM_REPO}/values-${params.DEVELOPER}.yaml"
-          sh """
-            yq e '.services["spring-petclinic-customers-service"].tag = "${CUSTOMERS_TAG}"' -i ${file}
-            yq e '.services["spring-petclinic-vets-service"].tag = "${VETS_TAG}"' -i ${file}
-            yq e '.services["spring-petclinic-visits-service"].tag = "${VISITS_TAG}"' -i ${file}
-          """
+          def valuesFile = "${HELM_REPO}/values-${params.developer}.yaml"
+          tagMap.each { helmServiceName, tag ->
+            sh """
+              yq e '.services["${helmServiceName}"].tag = "${tag}"' -i ${valuesFile}
+            """
+          }
         }
       }
     }
@@ -61,8 +71,8 @@ pipeline {
             sh """
               git config user.email "ci@example.com"
               git config user.name "jenkins"
-              git add values-${params.DEVELOPER}.yaml
-              git commit -m "Update ${params.DEVELOPER} values - ${BUILD_NUMBER}" || echo "No changes"
+              git add values-${params.developer}.yaml
+              git commit -m "Update ${params.developer} values - Build #${BUILD_NUMBER}" || echo "No changes"
               git push https://${GIT_USER}:${GIT_PASS}@github.com/vantaicn/spring-petclinic-microservices-gitops.git HEAD:main
             """
           }
@@ -73,8 +83,12 @@ pipeline {
     stage('Set Build Description') {
       steps {
         script {
-          currentBuild.displayName = "#${BUILD_NUMBER} - ${params.DEVELOPER}"
-          currentBuild.description = "Branch: customers=${params.CUSTOMERS_BRANCH}, vets=${params.VETS_BRANCH}, visits=${params.VISITS_BRANCH} <br><a href='http://${params.DEVELOPER}.spring-petclinic.local'>Xem hệ thống</a>"
+          def desc = services.collect { paramName, helmServiceName ->
+            "${helmServiceName} = ${tagMap[helmServiceName]}"
+          }.join(', ')
+
+          currentBuild.displayName = "#${BUILD_NUMBER} - ${params.developer}"
+          currentBuild.description = "${desc} <br><a href='http://${params.developer}.spring-petclinic.local'>Xem hệ thống</a>"
         }
       }
     }
