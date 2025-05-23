@@ -87,7 +87,7 @@ pipeline {
       steps {
         script {
           currentBuild.displayName = "#${BUILD_NUMBER} - ${params.developer}"
-          currentBuild.description = "<a href='http://${params.developer}.spring-petclinic:32623'>ABC</a>"
+          currentBuild.description = "[TEST](http://${params.developer}.spring-petclinic:32623)"
         }
       }
     }
