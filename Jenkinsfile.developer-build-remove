@@ -1,0 +1,22 @@
+pipeline {
+    agent any
+    parameters {
+        choice(
+            name: 'developer',
+            choices: ['thuw', 'trucs', 'quys', 'taif'],
+        )
+    }
+    stages {
+        stage('Delete Namespace') {
+            steps {
+                script {
+                    def ns = params.developer
+                    echo "Xóa namespace: ${ns}"
+                    sh """
+                        kubectl delete namespace ${ns} --wait=true || echo "Namespace ${ns} không tồn tại hoặc đã bị xóa"
+                    """
+                }
+            }
+        }
+    }
+}
