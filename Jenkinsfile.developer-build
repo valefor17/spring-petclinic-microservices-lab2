@@ -12,7 +12,7 @@ pipeline {
   environment {
     HELM_REPO = 'spring-petclinic-microservices-gitops'
     GIT_REPO_URL = 'https://github.com/vantaicn/spring-petclinic-microservices-gitops.git'
-    SOURCE_REPO = 'https://github.com/spring-petclinic/spring-petclinic-microservices.git'
+    SOURCE_REPO = 'https://github.com/valefor17/spring-petclinic-microservices-lab2.git'
   }
 
   stages {
