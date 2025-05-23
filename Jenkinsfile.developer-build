@@ -36,6 +36,8 @@ pipeline {
 
           services.each { paramName, helmServiceName ->
             def branch = params[paramName]
+            echo "${paraName}"
+            echo "${branch}"
             def tag = getTagForBranch(branch)
             tagMap[helmServiceName] = tag
             echo "${helmServiceName} -> ${tag}"
