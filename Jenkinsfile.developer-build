@@ -58,7 +58,7 @@ pipeline {
           def valuesFile = "${HELM_REPO}/values-${params.developer}.yaml"
           tagMap.each { helmServiceName, tag ->
             sh """
-              yq e '.services["${helmServiceName}"].tag = "${tag}"' -i ${valuesFile}
+              yq e '.services["${helmServiceName.replace("spring-petclinic-", "")}"].tag = "${tag}"' -i ${valuesFile}
             """
           }
         }
