@@ -54,29 +54,29 @@ pipeline {
       }
     }
 
-    stage('Update Helm values') {
+    stage('Deploy helm') {
       steps {
         script {
-          def valuesFile = "${HELM_REPO}/values-${params.developer}.yaml"
-          tagMap.each { helmServiceName, tag ->
-            sh """
-              yq e '.services["${helmServiceName.replace("spring-petclinic-", "")}"].tag = "${tag}"' -i ${valuesFile}
-            """
-          }
-        }
-      }
-    }
+          dir("${HELM_REPO}") {
+            def helmRelease = "spring-petclinic"
+            def namespace = "${params.developer}"
 
-    stage('Commit and Push') {
-      steps {
-        dir("${HELM_REPO}") {
-          withCredentials([usernamePassword(credentialsId: 'github-vantaicn', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh """
-              git config user.email "ci@example.com"
-              git config user.name "jenkins"
-              git add values-${params.developer}.yaml
-              git commit -m "Update ${params.developer} values - Build #${BUILD_NUMBER}" || echo "No changes"
-              git push https://${GIT_USER}:${GIT_PASS}@github.com/vantaicn/spring-petclinic-microservices-gitops.git HEAD:main
+            def releaseExists = sh(script: "helm status ${helmRelease} -n ${namespace}", returnStatus: true) == 0
+            def helmCmd = releaseExists ? "upgrade" : "install"
+
+            def customersTag  = tagMap['spring-petclinic-customers-service']
+            def visitsTag     = tagMap['spring-petclinic-visits-service']
+            def vetsTag       = tagMap['spring-petclinic-vets-service']
+            def gatewayTag    = tagMap['spring-petclinic-api-gateway']
+
+            // Helm deploy
+            sh """#!/bin/bash
+              helm ${helmCmd} ${helmRelease} . -f values.yaml \\
+                --set services.customers-service.tag=${customersTag} \\
+                --set services.visits-service.tag=${visitsTag} \\
+                --set services.vets-service.tag=${vetsTag} \\
+                --set services.api-gateway.tag=${gatewayTag} \\
+                -n ${namespace} --create-namespace
             """
           }
         }
@@ -87,7 +87,7 @@ pipeline {
       steps {
         script {
           currentBuild.displayName = "#${BUILD_NUMBER} - ${params.developer}"
-          currentBuild.description = "[TEST](http://${params.developer}.spring-petclinic:32623)"
+          currentBuild.description = "[PREVIEW](http://${params.developer}.spring-petclinic:32623)"
         }
       }
     }
