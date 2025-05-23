@@ -41,6 +41,7 @@ pipeline {
             env.TARGET_SERVICES = allServices.join(',')
           } else {
             def changedFiles = sh(script: "git diff --name-only HEAD~1", returnStdout: true).trim()
+            changedFiles.split('\n')
             // def services = [] as Set
             // changedFiles.split('\n').each { file ->
             //   if (file.contains("spring-petclinic-") && file.contains("-service/")) {
