@@ -86,12 +86,8 @@ pipeline {
     stage('Set Build Description') {
       steps {
         script {
-          def desc = services.collect { paramName, helmServiceName ->
-            "${helmServiceName} = ${tagMap[helmServiceName]}"
-          }.join(', ')
-
           currentBuild.displayName = "#${BUILD_NUMBER} - ${params.developer}"
-          currentBuild.description = "${desc} <br><a href='http://${params.developer}.spring-petclinic'>Xem hệ thống</a>"
+          currentBuild.description = "<br><a href='http://${params.developer}.spring-petclinic'>Xem hệ thống</a>"
         }
       }
     }
