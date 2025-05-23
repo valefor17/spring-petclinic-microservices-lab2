@@ -76,6 +76,7 @@ pipeline {
                 --set services.visits-service.tag=${visitsTag} \\
                 --set services.vets-service.tag=${vetsTag} \\
                 --set services.api-gateway.tag=${gatewayTag} \\
+                --set ingress.namespace=${namespace} \\
                 -n ${namespace} --create-namespace
             """
           }
