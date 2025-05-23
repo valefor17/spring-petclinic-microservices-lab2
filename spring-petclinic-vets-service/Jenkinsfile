@@ -30,7 +30,7 @@ pipeline {
           def matchedService = ''
 
           changedFiles.split('\n').each { file ->
-            if (file.contains("spring-petclinic-") && file.contains("-service/")) {
+            if (file.contains("spring-petclinic-") && allServices.contains(folder)) {
               matchedService = file.split('/')[0]
             }
           }

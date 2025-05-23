@@ -43,8 +43,9 @@ pipeline {
             def changedFiles = sh(script: "git diff --name-only HEAD~1", returnStdout: true).trim()
             def services = [] as Set
             changedFiles.split('\n').each { file ->
-              if (file.contains("spring-petclinic-") && file.contains("-service/")) {
-                services << file.split('/')[0]
+              def folder = file.split('/')[0]
+              if (folder.startsWith("spring-petclinic-") && allServices.contains(folder)) {
+                services << folder
               }
             }
 
@@ -116,7 +117,7 @@ pipeline {
           echo "Cập nhật image tag trong ${helmValuesFile}"
           TARGET_SERVICES.split(',').each { svc ->
             sh """
-              yq e '.services["${svc}"].tag = "${IMAGE_TAG}"' -i ${helmValuesFile}
+              yq e '.services["${svc.replace("spring-petclinic-", "")}"].tag = "${IMAGE_TAG}"' -i ${helmValuesFile}
             """
           }
           env.HELM_VALUES_UPDATED = "true"
