@@ -38,24 +38,22 @@ pipeline {
 
           if (env.TAG_NAME) {
             echo "Tag được phát hiện (${env.TAG_NAME}) → build toàn bộ services."
-            env.TARGET_SERVICES = allServices.join(',')
+            TARGET_SERVICES = allServices.join(',')
           } else {
             def changedFiles = sh(script: "git diff --name-only HEAD~1", returnStdout: true).trim()
-            changedFiles.split('\n')
-            // def services = [] as Set
-            // changedFiles.split('\n').each { file ->
-            //   if (file.contains("spring-petclinic-") && file.contains("-service/")) {
-            //     services << file.split('/')[0]
-            //   }
-            // }
+            def services = [] as Set
+            changedFiles.split('\n').each { file ->
+              if (file.contains("spring-petclinic-") && file.contains("-service/")) {
+                services << file.split('/')[0]
+              }
+            }
 
-            // if (services.isEmpty()) {
-            //   error("Không phát hiện service nào bị thay đổi.")
-            // }
+            if (services.isEmpty()) {
+              error("Không phát hiện service nào bị thay đổi.")
+            }
 
-            // env.TARGET_SERVICES = services.join(',')
-            // echo "Changed services: ${env.TARGET_SERVICES}"
-            echo "Hello"
+            TARGET_SERVICES = services.join(',')
+            echo "Changed services: ${TARGET_SERVICES}"
           }
         }
       }
@@ -64,7 +62,7 @@ pipeline {
     stage('Build Docker Images') {
       steps {
         script {
-          env.TARGET_SERVICES.split(',').each { svc ->
+          TARGET_SERVICES.split(',').each { svc ->
             dir("${svc}") {
               sh "../mvnw clean install -P buildDocker -Ddocker.image.prefix=${DOCKER_HUB_USER}"
             }
@@ -78,7 +76,7 @@ pipeline {
         withCredentials([usernamePassword(credentialsId: 'dockerhub-vantaicn', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           script {
             sh 'echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin'
-            env.TARGET_SERVICES.split(',').each { svc ->
+            TARGET_SERVICES.split(',').each { svc ->
               sh """
                 docker tag ${DOCKER_HUB_USER}/${svc}:latest ${DOCKER_HUB_USER}/${svc}:${IMAGE_TAG}
                 docker push ${DOCKER_HUB_USER}/${svc}:${IMAGE_TAG}
@@ -116,7 +114,7 @@ pipeline {
           def helmValuesFile = "${HELM_REPO_DIR}/${envFile}"
 
           echo "Cập nhật image tag trong ${helmValuesFile}"
-          env.TARGET_SERVICES.split(',').each { svc ->
+          TARGET_SERVICES.split(',').each { svc ->
             sh """
               yq e '.services["${svc}"].tag = "${IMAGE_TAG}"' -i ${helmValuesFile}
             """
