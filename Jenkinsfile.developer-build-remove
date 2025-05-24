@@ -11,9 +11,9 @@ pipeline {
             steps {
                 script {
                     def ns = params.developer
-                    echo "Xóa namespace: ${ns}"
+                    echo "Deleting namespace: ${ns}"
                     sh """
-                        kubectl delete namespace ${ns} --wait=true || echo "Namespace ${ns} không tồn tại hoặc đã bị xóa"
+                        kubectl delete namespace ${ns} --wait=true || echo "Namespace ${ns} does not exist or has already been deleted"
                     """
                 }
             }

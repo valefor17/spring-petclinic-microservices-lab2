@@ -18,7 +18,7 @@ pipeline {
           } else if (env.GIT_COMMIT) {
             IMAGE_TAG = env.GIT_COMMIT.take(7)
           }
-          echo "Image tag sẽ dùng: ${IMAGE_TAG}"
+          echo "Image tag to be used: ${IMAGE_TAG}"
         }
       }
     }
@@ -37,7 +37,7 @@ pipeline {
           ]
 
           if (env.TAG_NAME) {
-            echo "Tag được phát hiện (${env.TAG_NAME}) → build toàn bộ services."
+            echo "Tag detected (${env.TAG_NAME}) → building all services."
             TARGET_SERVICES = allServices.join(',')
           } else {
             def changedFiles = sh(script: "git diff --name-only HEAD~1", returnStdout: true).trim()
@@ -50,7 +50,9 @@ pipeline {
             }
 
             if (services.isEmpty()) {
-              error("Không phát hiện service nào bị thay đổi.")
+              echo "✅ No changed services detected. Stopping pipeline."
+              currentBuild.result = 'SUCCESS'
+              return
             }
 
             TARGET_SERVICES = services.join(',')
@@ -114,7 +116,7 @@ pipeline {
           def envFile = env.TAG_NAME?.startsWith('v') ? 'values-staging.yaml' : 'values-dev.yaml'
           def helmValuesFile = "${HELM_REPO_DIR}/${envFile}"
 
-          echo "Cập nhật image tag trong ${helmValuesFile}"
+          echo "Updating image tag in ${helmValuesFile}"
           TARGET_SERVICES.split(',').each { svc ->
             sh """
               yq e '.services["${svc.replace("spring-petclinic-", "")}"].tag = "${IMAGE_TAG}"' -i ${helmValuesFile}

@@ -2,11 +2,11 @@ pipeline {
   agent any
 
   parameters {
-    string(name: 'customers-service', defaultValue: 'main', description: 'Branch you want to deploy customers-service')
-    string(name: 'vets-service', defaultValue: 'main', description: 'Branch you want to deploy vets-service')
-    string(name: 'visits-service', defaultValue: 'main', description: 'Branch you want to deploy visits-service')
-    string(name: 'api-gateway', defaultValue: 'main', description: 'Branch you want to deploy api-gateway')
-    choice(name: 'developer', choices: ['thuw', 'trucs', 'quys', 'taif'], description: 'Developer name')
+    string(name: 'customers-service', defaultValue: 'main')
+    string(name: 'vets-service', defaultValue: 'main')
+    string(name: 'visits-service', defaultValue: 'main')
+    string(name: 'api-gateway', defaultValue: 'main')
+    choice(name: 'developer', choices: ['thuw', 'trucs', 'quys', 'taif'])
   }
 
   environment {
@@ -27,18 +27,38 @@ pipeline {
           ]
           tagMap = [:]
 
-          def getTagForBranch = { branch ->
+          def getTagForBranch = { serviceKey, branch ->
             if (!branch || branch == 'main') {
               return 'latest'
             }
-            return sh(script: "git ls-remote ${SOURCE_REPO} refs/heads/${branch} | cut -f1", returnStdout: true).trim().take(7)
+
+            def commit = sh(
+              script: "git ls-remote ${SOURCE_REPO} refs/heads/${branch} | cut -f1",
+              returnStdout: true
+            ).trim()
+
+            if (!commit) {
+              error "❌ Branch '${branch}' does not exist in the source repo for service '${serviceKey}'!"
+            }
+
+            def tag = commit.take(7)
+
+            def imageName = "vantaicn/${serviceKey}"
+            def exists = sh(
+              script: "curl -s https://hub.docker.com/v2/repositories/${imageName}/tags/${tag} | grep -q 'name'",
+              returnStatus: true
+            ) == 0
+
+            if (!exists) {
+              error "❌ Docker image '${imageName}:${tag}' does not exist on Docker Hub!"
+            }
+
+            return tag
           }
 
           services.each { paramName, helmServiceName ->
             def branch = params[paramName]
-            echo "${paramName}"
-            echo "${branch}"
-            def tag = getTagForBranch(branch)
+            def tag = getTagForBranch(helmServiceName, branch)
             tagMap[helmServiceName] = tag
             echo "${helmServiceName} -> ${tag}"
           }
@@ -69,7 +89,6 @@ pipeline {
             def vetsTag       = tagMap['spring-petclinic-vets-service']
             def gatewayTag    = tagMap['spring-petclinic-api-gateway']
 
-            // Helm deploy
             sh """#!/bin/bash
               helm ${helmCmd} ${helmRelease} . -f values.yaml \\
                 --set services.customers-service.tag=${customersTag} \\
