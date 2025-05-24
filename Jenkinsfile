@@ -50,9 +50,7 @@ pipeline {
             }
 
             if (services.isEmpty()) {
-              echo "✅ No changed services detected. Stopping pipeline."
-              currentBuild.result = 'SUCCESS'
-              return
+              error "❌ No changed services detected. Stopping pipeline."
             }
 
             TARGET_SERVICES = services.join(',')
