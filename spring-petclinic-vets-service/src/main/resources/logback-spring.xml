@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <include resource="org/springframework/boot/logging/logback/base.xml"/>
-    <!-- Required for Loglevel managment into the Spring Petclinic Admin Server-->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <property name="CUSTOM_CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%15.15thread] %-5level %-40.40logger{39} : traceId=%X{traceId:-}, spanId=%X{spanId:-} : %msg%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CUSTOM_CONSOLE_LOG_PATTERN}</pattern>
+            <charset>${CONSOLE_LOG_CHARSET:-UTF-8}</charset>
+        </encoder>
+    </appender>
+    <root level="INFO"> 
+        <appender-ref ref="CONSOLE"/>
+    </root>
     <jmxConfigurator/>
 </configuration>
