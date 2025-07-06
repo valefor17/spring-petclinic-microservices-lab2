@@ -79,7 +79,7 @@ pipeline {
         script {
           dir("${HELM_REPO}") {
             def namespace = "${params.developer}"
-            def helmRelease = "spring-petclinic-${namespace}"
+            def helmRelease = "spring-petclinic"
 
             def releaseExists = sh(script: "helm status ${helmRelease} -n ${namespace}", returnStatus: true) == 0
             def helmCmd = releaseExists ? "upgrade" : "install"
